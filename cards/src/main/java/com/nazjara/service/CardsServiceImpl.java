@@ -8,14 +8,14 @@ import com.nazjara.exception.ResourceNotFoundException;
 import com.nazjara.mapper.CardsMapper;
 import com.nazjara.repository.CardsRepository;
 import java.util.Random;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class CardsServiceImpl implements ICardsService {
 
-  private CardsRepository cardsRepository;
+  private final CardsRepository cardsRepository;
 
   /**
    * @param mobileNumber - Mobile Number of the Customer
