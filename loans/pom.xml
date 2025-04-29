@@ -69,6 +69,11 @@
         </executions>
         <configuration>
           <mainClass>com.nazjara.LoansApplication</mainClass>
+          <!-- This config will enable Docker image build using Buildpacks (without a Dockerfile) -->
+          <!-- mvn spring-boot:build-image -->
+          <image>
+            <name>nazjara/${project.artifactId}:${project.version}</name>
+          </image>
           <excludes>
             <exclude>
               <groupId>org.projectlombok</groupId>
