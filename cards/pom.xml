@@ -80,6 +80,18 @@
           </layers>
         </configuration>
       </plugin>
+      <!-- This config will enable Docker image build using Google Jib (without a Dockerfile) -->
+      <!-- mvn jib:dockerBuild -->
+      <plugin>
+        <groupId>com.google.cloud.tools</groupId>
+        <artifactId>jib-maven-plugin</artifactId>
+        <version>3.4.5</version>
+        <configuration>
+          <to>
+            <image>nazjara/${project.artifactId}:${project.version}</image>
+          </to>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 
