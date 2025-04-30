@@ -1,0 +1,78 @@
+version: '3.8'
+
+# Docker Compose configuration for Spring Boot Microservices
+# This file orchestrates three microservices:
+# 1. accounts - Dockerized using traditional Dockerfile
+# 2. loans - Dockerized using Spring Boot Buildpacks
+# 3. cards - Dockerized using Google Jib
+#
+# Usage:
+# - Build all services: docker-compose build
+# - Start all services: docker-compose up -d
+# - View logs: docker-compose logs -f
+# - Stop all services: docker-compose down
+# - Stop and remove volumes: docker-compose down -v
+
+services:
+  # Accounts Service - Core banking account management
+  # Dockerized using traditional Dockerfile approach
+  accounts:
+    build:
+      context: accounts
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    networks:
+      - microservices-network
+    container_name: accounts-service
+    hostname: accounts-service
+    restart: unless-stopped
+    volumes:
+      - accounts-data:/app/data
+
+  # Loans Service - Manages loan products and applications
+  # Dockerized using Spring Boot Buildpacks
+  loans:
+    # Using Spring Boot Buildpacks (no explicit Dockerfile needed)
+    # The Spring Boot Maven plugin will create the image
+    image: nazjara/loans:latest
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    networks:
+      - microservices-network
+    container_name: loans-service
+    hostname: loans-service
+    restart: unless-stopped
+    volumes:
+      - loans-data:/app/data
+
+  # Cards Service - Manages credit and debit card products
+  # Dockerized using Google Jib
+  cards:
+    # Using Google Jib for containerization
+    # The image is built during the Maven build process
+    image: nazjara/cards:latest
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    networks:
+      - microservices-network
+    container_name: cards-service
+    hostname: cards-service
+    restart: unless-stopped
+    volumes:
+      - cards-data:/app/data
+
+networks:
+  microservices-network:
+    driver: bridge
+
+volumes:
+  accounts-data:
+  loans-data:
+  cards-data:
