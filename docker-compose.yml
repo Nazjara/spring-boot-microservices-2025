@@ -23,9 +23,8 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - SPRING_APPLICATION_NAME=accounts
       - SPRING_PROFILES_ACTIVE=dev
-      - SPRING_CONFIG_IMPORT=optional:configserver:http://configserver:8071
+      - SPRING_CONFIG_IMPORT=configserver:http://configserver:8071/
       - SPRING_RABBITMQ_HOST=rabbitmq
     depends_on:
       configserver:
@@ -33,7 +32,6 @@ services:
     networks:
       - microservices-network
     container_name: accounts-service
-    hostname: accounts-service
     restart: unless-stopped
     volumes:
       - accounts-data:/app/data
@@ -47,9 +45,8 @@ services:
     ports:
       - "8082:8082"
     environment:
-      - SPRING_APPLICATION_NAME=loans
       - SPRING_PROFILES_ACTIVE=dev
-      - SPRING_CONFIG_IMPORT=optional:configserver:http://configserver:8071
+      - SPRING_CONFIG_IMPORT=configserver:http://configserver:8071/
       - SPRING_RABBITMQ_HOST=rabbitmq
     depends_on:
       configserver:
@@ -57,7 +54,6 @@ services:
     networks:
       - microservices-network
     container_name: loans-service
-    hostname: loans-service
     restart: unless-stopped
     volumes:
       - loans-data:/app/data
@@ -71,9 +67,8 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - SPRING_APPLICATION_NAME=cards
       - SPRING_PROFILES_ACTIVE=dev
-      - SPRING_CONFIG_IMPORT=optional:configserver:http://configserver:8071
+      - SPRING_CONFIG_IMPORT=configserver:http://configserver:8071/
       - SPRING_RABBITMQ_HOST=rabbitmq
     depends_on:
       configserver:
@@ -81,7 +76,6 @@ services:
     networks:
       - microservices-network
     container_name: cards-service
-    hostname: cards-service
     restart: unless-stopped
     volumes:
       - cards-data:/app/data
@@ -97,7 +91,6 @@ services:
     networks:
       - microservices-network
     container_name: config-server
-    hostname: config-server
     restart: unless-stopped
     depends_on:
       rabbitmq:
@@ -123,7 +116,6 @@ services:
     networks:
       - microservices-network
     container_name: rabbitmq
-    hostname: rabbitmq
     restart: unless-stopped
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
