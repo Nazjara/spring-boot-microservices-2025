@@ -23,7 +23,13 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_APPLICATION_NAME=accounts
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://configserver:8071
+      - SPRING_RABBITMQ_HOST=rabbitmq
+    depends_on:
+      configserver:
+        condition: service_healthy
     networks:
       - microservices-network
     container_name: accounts-service
@@ -37,11 +43,17 @@ services:
   loans:
     # Using Spring Boot Buildpacks (no explicit Dockerfile needed)
     # The Spring Boot Maven plugin will create the image
-    image: nazjara/loans:latest
+    image: nazjara/loans:1.0.0-SNAPSHOT
     ports:
       - "8082:8082"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_APPLICATION_NAME=loans
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://configserver:8071
+      - SPRING_RABBITMQ_HOST=rabbitmq
+    depends_on:
+      configserver:
+        condition: service_healthy
     networks:
       - microservices-network
     container_name: loans-service
@@ -55,11 +67,17 @@ services:
   cards:
     # Using Google Jib for containerization
     # The image is built during the Maven build process
-    image: nazjara/cards:latest
+    image: nazjara/cards:1.0.0-SNAPSHOT
     ports:
       - "8081:8081"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_APPLICATION_NAME=cards
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://configserver:8071
+      - SPRING_RABBITMQ_HOST=rabbitmq
+    depends_on:
+      configserver:
+        condition: service_healthy
     networks:
       - microservices-network
     container_name: cards-service
@@ -68,11 +86,61 @@ services:
     volumes:
       - cards-data:/app/data
 
+  # Config Server - Centralized configuration management
+  configserver:
+    image: nazjara/configserver:1.0.0-SNAPSHOT
+    ports:
+      - "8071:8071"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_RABBITMQ_HOST=rabbitmq
+    networks:
+      - microservices-network
+    container_name: config-server
+    hostname: config-server
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - configserver-data:/app/data
+    healthcheck:
+      test: "curl --fail --silent localhost:8071/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # RabbitMQ - Message broker for Spring Cloud Bus
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"  # RabbitMQ standard port
+      - "15672:15672"  # RabbitMQ management port
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    networks:
+      - microservices-network
+    container_name: rabbitmq
+    hostname: rabbitmq
+    restart: unless-stopped
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics check_port_connectivity
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
 networks:
   microservices-network:
     driver: bridge
 
 volumes:
   accounts-data:
+  configserver-data:
+  rabbitmq-data:
   loans-data:
   cards-data:
