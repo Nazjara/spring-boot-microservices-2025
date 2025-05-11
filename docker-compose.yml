@@ -17,17 +17,18 @@ services:
   # Accounts Service - Core banking account management
   # Dockerized using traditional Dockerfile approach
   accounts:
-    build:
-      context: accounts
-      dockerfile: Dockerfile
+    image: nazjara/accounts:1.0.0-SNAPSHOT
     ports:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
-      - SPRING_CONFIG_IMPORT=configserver:http://configserver:8071/
+      - SPRING_CONFIG_SERVER_URI=http://config-server:8071
       - SPRING_RABBITMQ_HOST=rabbitmq
+      - DB_URL=jdbc:mysql://mysql-accounts:3306/accountsdb
     depends_on:
-      configserver:
+      config-server:
+        condition: service_healthy
+      mysql-accounts:
         condition: service_healthy
     networks:
       - microservices-network
@@ -46,10 +47,13 @@ services:
       - "8082:8082"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
-      - SPRING_CONFIG_IMPORT=configserver:http://configserver:8071/
+      - SPRING_CONFIG_SERVER_URI=http://config-server:8071
       - SPRING_RABBITMQ_HOST=rabbitmq
+      - DB_URL=jdbc:mysql://mysql-loans:3306/loansdb
     depends_on:
-      configserver:
+      config-server:
+        condition: service_healthy
+      mysql-loans:
         condition: service_healthy
     networks:
       - microservices-network
@@ -68,10 +72,13 @@ services:
       - "8081:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
-      - SPRING_CONFIG_IMPORT=configserver:http://configserver:8071/
+      - SPRING_CONFIG_SERVER_URI=http://config-server:8071
       - SPRING_RABBITMQ_HOST=rabbitmq
+      - DB_URL=jdbc:mysql://mysql-cards:3306/cardsdb
     depends_on:
-      configserver:
+      config-server:
+        condition: service_healthy
+      mysql-cards:
         condition: service_healthy
     networks:
       - microservices-network
@@ -81,7 +88,7 @@ services:
       - cards-data:/app/data
 
   # Config Server - Centralized configuration management
-  configserver:
+  config-server:
     image: nazjara/configserver:1.0.0-SNAPSHOT
     ports:
       - "8071:8071"
@@ -126,6 +133,66 @@ services:
       retries: 10
       start_period: 10s
 
+  mysql-accounts:
+    image: mysql:8.0
+    container_name: mysql-accounts
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=accountsdb
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    volumes:
+      - mysql-accounts-data:/var/lib/mysql-accounts
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+      
+  mysql-cards:
+    image: mysql:8.0
+    container_name: mysql-cards
+    ports:
+      - "3307:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=cardsdb
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    volumes:
+      - mysql-cards-data:/var/lib/mysql-cards
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+      
+  mysql-loans:
+    image: mysql:8.0
+    container_name: mysql-loans
+    ports:
+      - "3308:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=loansdb
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    volumes:
+      - mysql-loans-data:/var/lib/mysql-loans
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
 networks:
   microservices-network:
     driver: bridge
@@ -136,3 +203,6 @@ volumes:
   rabbitmq-data:
   loans-data:
   cards-data:
+  mysql-accounts-data:
+  mysql-cards-data:
+  mysql-loans-data:
