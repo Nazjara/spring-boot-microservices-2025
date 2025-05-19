@@ -25,8 +25,9 @@ services:
       - SPRING_CONFIG_SERVER_URI=http://config-server:8071
       - SPRING_RABBITMQ_HOST=rabbitmq
       - DB_URL=jdbc:mysql://mysql-accounts:3306/accountsdb
+      - SPRING_EUREKA_SERVER_URI=http://discovery-service:8070
     depends_on:
-      config-server:
+      discovery-service:
         condition: service_healthy
       mysql-accounts:
         condition: service_healthy
@@ -50,8 +51,9 @@ services:
       - SPRING_CONFIG_SERVER_URI=http://config-server:8071
       - SPRING_RABBITMQ_HOST=rabbitmq
       - DB_URL=jdbc:mysql://mysql-loans:3306/loansdb
+      - SPRING_EUREKA_SERVER_URI=http://discovery-service:8070
     depends_on:
-      config-server:
+      discovery-service:
         condition: service_healthy
       mysql-loans:
         condition: service_healthy
@@ -75,8 +77,9 @@ services:
       - SPRING_CONFIG_SERVER_URI=http://config-server:8071
       - SPRING_RABBITMQ_HOST=rabbitmq
       - DB_URL=jdbc:mysql://mysql-cards:3306/cardsdb
+      - SPRING_EUREKA_SERVER_URI=http://discovery-service:8070
     depends_on:
-      config-server:
+      discovery-service:
         condition: service_healthy
       mysql-cards:
         condition: service_healthy
@@ -106,6 +109,30 @@ services:
       - configserver-data:/app/data
     healthcheck:
       test: "curl --fail --silent localhost:8071/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  discovery-service:
+    image: nazjara/discovery-service:1.0.0-SNAPSHOT
+    ports:
+      - "8070:8070"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_CONFIG_SERVER_URI=http://config-server:8071
+    networks:
+      - microservices-network
+    container_name: discovery-service
+    restart: unless-stopped
+    depends_on:
+      config-server:
+        condition: service_healthy
+    volumes:
+      - discovery-service-data:/app/data
+    healthcheck:
+      test: "curl --fail --silent localhost:8070/actuator/health/readiness | grep UP || exit 1"
       interval: 10s
       timeout: 5s
       retries: 10
@@ -206,3 +233,4 @@ volumes:
   mysql-accounts-data:
   mysql-cards-data:
   mysql-loans-data:
+  discovery-service-data:

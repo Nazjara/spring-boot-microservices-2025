@@ -1,5 +1,6 @@
 package com.nazjara.mapper;
 
+import com.nazjara.dto.CustomerDetailsDto;
 import com.nazjara.dto.CustomerDto;
 import com.nazjara.entity.Customer;
 import lombok.experimental.UtilityClass;
@@ -20,5 +21,13 @@ public class CustomerMapper {
     customer.setEmail(customerDto.getEmail());
     customer.setMobileNumber(customerDto.getMobileNumber());
     return customer;
+  }
+
+  public CustomerDetailsDto mapToCustomerDetailsDto(Customer customer,
+      CustomerDetailsDto customerDetailsDto) {
+    customerDetailsDto.setName(customer.getName());
+    customerDetailsDto.setEmail(customer.getEmail());
+    customerDetailsDto.setMobileNumber(customer.getMobileNumber());
+    return customerDetailsDto;
   }
 }
