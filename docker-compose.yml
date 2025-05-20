@@ -15,11 +15,8 @@ version: '3.8'
 
 services:
   # Accounts Service - Core banking account management
-  # Dockerized using traditional Dockerfile approach
   accounts:
     image: nazjara/accounts:1.0.0-SNAPSHOT
-    ports:
-      - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - SPRING_CONFIG_SERVER_URI=http://config-server:8071
@@ -44,8 +41,6 @@ services:
     # Using Spring Boot Buildpacks (no explicit Dockerfile needed)
     # The Spring Boot Maven plugin will create the image
     image: nazjara/loans:1.0.0-SNAPSHOT
-    ports:
-      - "8082:8082"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - SPRING_CONFIG_SERVER_URI=http://config-server:8071
@@ -70,8 +65,6 @@ services:
     # Using Google Jib for containerization
     # The image is built during the Maven build process
     image: nazjara/cards:1.0.0-SNAPSHOT
-    ports:
-      - "8081:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - SPRING_CONFIG_SERVER_URI=http://config-server:8071
@@ -96,7 +89,7 @@ services:
     ports:
       - "8071:8071"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_PROFILES_ACTIVE=dev
       - SPRING_RABBITMQ_HOST=rabbitmq
     networks:
       - microservices-network
@@ -119,7 +112,7 @@ services:
     ports:
       - "8070:8070"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_PROFILES_ACTIVE=dev
       - SPRING_RABBITMQ_HOST=rabbitmq
       - SPRING_CONFIG_SERVER_URI=http://config-server:8071
     networks:
@@ -133,6 +126,35 @@ services:
       - discovery-service-data:/app/data
     healthcheck:
       test: "curl --fail --silent localhost:8070/actuator/health/readiness | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+      
+  gateway-service:
+    image: nazjara/gateway-service:1.0.0-SNAPSHOT
+    ports:
+      - "8072:8072"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_CONFIG_SERVER_URI=http://config-server:8071
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_EUREKA_SERVER_URI=http://discovery-service:8070
+    networks:
+      - microservices-network
+    container_name: gateway-service
+    restart: unless-stopped
+    depends_on:
+      accounts:
+        condition: service_started
+      loans:
+        condition: service_started
+      cards:
+        condition: service_started
+    volumes:
+      - gateway-service-data:/app/data
+    healthcheck:
+      test: "curl --fail --silent localhost:8072/actuator/health/readiness | grep UP || exit 1"
       interval: 10s
       timeout: 5s
       retries: 10
@@ -234,3 +256,4 @@ volumes:
   mysql-cards-data:
   mysql-loans-data:
   discovery-service-data:
+  gateway-service-data:
