@@ -22,7 +22,7 @@ public class ICustomerServiceImpl implements ICustomerService {
   private final LoansFeignClient loansFeignClient;
 
   @Override
-  public CustomerDetailsDto getCustomerDetails(String mobileNumber) {
+  public CustomerDetailsDto getCustomerDetails(String mobileNumber, String correlationId) {
     var customer = customerRepository.findByMobileNumber(mobileNumber).orElseThrow(
         () -> new ResourceNotFoundException("Customer", "mobileNumber", mobileNumber)
     );
@@ -34,8 +34,10 @@ public class ICustomerServiceImpl implements ICustomerService {
 
     var customerDto = CustomerMapper.mapToCustomerDetailsDto(customer, new CustomerDetailsDto());
     customerDto.setAccountsDto(AccountsMapper.mapToAccountsDto(accounts, new AccountsDto()));
-    customerDto.setLoansDto(loansFeignClient.fetchLoanDetails(mobileNumber).getBody());
-    customerDto.setCardsDto(cardsFeignClient.fetchCardDetails(mobileNumber).getBody());
+    customerDto.setLoansDto(
+        loansFeignClient.fetchLoanDetails(mobileNumber, correlationId).getBody());
+    customerDto.setCardsDto(
+        cardsFeignClient.fetchCardDetails(mobileNumber, correlationId).getBody());
 
     return customerDto;
   }
