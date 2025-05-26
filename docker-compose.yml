@@ -140,6 +140,7 @@ services:
       - SPRING_CONFIG_SERVER_URI=http://config-server:8071
       - SPRING_RABBITMQ_HOST=rabbitmq
       - SPRING_EUREKA_SERVER_URI=http://discovery-service:8070
+      - SPRING_REDIS_HOST=redis
     networks:
       - microservices-network
     container_name: gateway-service
@@ -151,6 +152,8 @@ services:
         condition: service_started
       cards:
         condition: service_started
+      redis:
+        condition: service_healthy
     volumes:
       - gateway-service-data:/app/data
     healthcheck:
@@ -180,6 +183,24 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    networks:
+      - microservices-network
+    container_name: redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/var/lib/redis
+    command: [ "redis-server", "--appendonly", "yes" ]
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
       start_period: 10s
 
   mysql-accounts:
@@ -257,3 +278,4 @@ volumes:
   mysql-loans-data:
   discovery-service-data:
   gateway-service-data:
+  redis-data:
