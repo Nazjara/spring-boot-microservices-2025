@@ -130,7 +130,7 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
-      
+
   gateway-service:
     image: nazjara/gateway-service:1.0.0-SNAPSHOT
     ports:
@@ -222,7 +222,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
-      
+
   mysql-cards:
     image: mysql:8.0
     container_name: mysql-cards
@@ -242,7 +242,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
-      
+
   mysql-loans:
     image: mysql:8.0
     container_name: mysql-loans
@@ -263,6 +263,111 @@ services:
       retries: 3
       start_period: 30s
 
+  # Loki - Log aggregation system
+  loki:
+    image: grafana/loki:2.9.3
+    container_name: loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    depends_on:
+      minio:
+        condition: service_healthy
+    volumes:
+      - loki-data:/loki
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:3100/ready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # MinIO - a high-performance, S3-compatible object storage system
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - "9000:9000"       # MinIO API
+      - "9001:9001"       # MinIO Console UI
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/ready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # Alloy (Log collector, formerly Promtail)
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    volumes:
+      - /var/log:/var/log
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config.alloy:/etc/alloy/config.alloy
+    ports:
+      - "12345:12345"
+    restart: unless-stopped
+    networks:
+      - microservices-network
+    depends_on:
+      - loki
+
+  # Grafana - Visualization dashboard
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - microservices-network
+    volumes:
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_FEATURE_TOGGLES_ENABLE=alertingSimplifiedRouting,alertingQueryAndExpressionsStepMode
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        mkdir -p /etc/grafana/provisioning/datasources
+        cat <<EOF > /etc/grafana/provisioning/datasources/ds.yaml
+        apiVersion: 1
+        datasources:
+        - name: Loki
+          type: loki
+          access: proxy 
+          orgId: 1
+          url: http://loki:3100
+          basicAuth: false
+          isDefault: true
+          version: 1
+          editable: false
+        EOF
+        /run.sh
+    depends_on:
+      - loki
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
 networks:
   microservices-network:
     driver: bridge
@@ -279,3 +384,6 @@ volumes:
   discovery-service-data:
   gateway-service-data:
   redis-data:
+  loki-data:
+  grafana-data:
+  minio-data:
