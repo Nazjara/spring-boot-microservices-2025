@@ -29,7 +29,7 @@ public class CustomerController {
       @RequestHeader("bank-correlation-id") String correlationId,
       @RequestParam @Pattern(regexp = "(^$|[0-9]{10})",
           message = "Mobile number must be 10 digits") String mobileNumber) {
-    log.info("bank-correlation-id found: {}", correlationId);
+    log.info("getCustomerDetails request initiated");
     return ResponseEntity.ok(iCustomerService.getCustomerDetails(mobileNumber, correlationId));
   }
 
