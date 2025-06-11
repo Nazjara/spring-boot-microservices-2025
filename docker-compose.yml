@@ -171,6 +171,7 @@ services:
       - OTEL_METRICS_EXPORTER=none
       - OTEL_LOGS_EXPORTER=none
       - OTEL_SERVICE_NAME=gateway-service
+      - SPRING_OAUTH2_JWK_SET_URI=http://keycloak:8080/realms/master/protocol/openid-connect/certs
     networks:
       - microservices-network
     container_name: gateway-service
@@ -245,7 +246,7 @@ services:
       - microservices-network
     restart: unless-stopped
     volumes:
-      - mysql-accounts-data:/var/lib/mysql-accounts
+      - mysql-accounts-data:/var/lib/mysql
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD" ]
       interval: 10s
@@ -265,7 +266,7 @@ services:
       - microservices-network
     restart: unless-stopped
     volumes:
-      - mysql-cards-data:/var/lib/mysql-cards
+      - mysql-cards-data:/var/lib/mysql
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD" ]
       interval: 10s
@@ -285,7 +286,28 @@ services:
       - microservices-network
     restart: unless-stopped
     volumes:
-      - mysql-loans-data:/var/lib/mysql-loans
+      - mysql-loans-data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD" ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  mysql-keycloak:
+    image: mysql:8.0
+    container_name: mysql-keycloak
+    ports:
+      - "3309:3306"
+    environment:
+      - MYSQL_DATABASE=keycloak
+      - MYSQL_USER=keycloak
+      - MYSQL_PASSWORD=keycloakpass
+      - MYSQL_ROOT_PASSWORD=rootpass
+    networks:
+      - microservices-network
+    volumes:
+      - mysql-keycloak-data:/var/lib/mysql
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD" ]
       interval: 10s
@@ -445,6 +467,28 @@ services:
       - microservices-network
     restart: unless-stopped
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: keycloak
+    environment:
+      KC_DB: mysql
+      KC_DB_URL: jdbc:mysql://mysql-keycloak:3306/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloakpass
+      KC_HEALTH_ENABLED: "true"
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: adminpass
+      KC_PROXY: edge
+    command: start-dev
+    depends_on:
+      mysql-keycloak:
+        condition: service_healthy
+    ports:
+      - "7070:8080"
+    restart: unless-stopped
+    networks:
+      - microservices-network
+
 networks:
   microservices-network:
     driver: bridge
@@ -465,3 +509,4 @@ volumes:
   grafana-data:
   minio-data:
   tempo-data:
+  mysql-keycloak-data:
