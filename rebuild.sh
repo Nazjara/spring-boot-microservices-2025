@@ -9,6 +9,7 @@ IMAGES=(
   "nazjara/discovery-service:1.0.0-SNAPSHOT"
   "nazjara/gateway-service:1.0.0-SNAPSHOT"
   "nazjara/loans:1.0.0-SNAPSHOT"
+  "nazjara/message:1.0.0-SNAPSHOT"
 )
 
 MODULES=(
@@ -18,6 +19,7 @@ MODULES=(
   "discovery-service"
   "gateway-service"
   "loans"
+  "message"
 )
 
 echo "=== Removing Docker images if exist ==="

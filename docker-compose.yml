@@ -33,6 +33,8 @@ services:
         condition: service_healthy
       mysql-accounts:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - microservices-network
     container_name: accounts
@@ -97,6 +99,21 @@ services:
     restart: unless-stopped
     volumes:
       - cards-data:/app/data
+
+  message:
+    image: nazjara/message:1.0.0-SNAPSHOT
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_RABBITMQ_HOST=rabbitmq
+    depends_on: 
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    container_name: message-service
+    restart: unless-stopped
+    volumes:
+      - message-data:/app/data
 
   # Config Server - Centralized configuration management
   config-server:
@@ -510,3 +527,4 @@ volumes:
   minio-data:
   tempo-data:
   mysql-keycloak-data:
+  message-data:

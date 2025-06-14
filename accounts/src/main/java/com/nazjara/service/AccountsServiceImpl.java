@@ -2,6 +2,7 @@ package com.nazjara.service;
 
 import com.nazjara.constant.AccountsConstants;
 import com.nazjara.dto.AccountsDto;
+import com.nazjara.dto.AccountsMessageDto;
 import com.nazjara.dto.CustomerDto;
 import com.nazjara.entity.Accounts;
 import com.nazjara.entity.Customer;
@@ -13,11 +14,11 @@ import com.nazjara.repository.AccountsRepository;
 import com.nazjara.repository.CustomerRepository;
 import java.util.Random;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Service;
 
 /**
- * Implementation of the IAccountsService interface that provides
- * account-related operations
+ * Implementation of the IAccountsService interface that provides account-related operations
  */
 @Service
 @RequiredArgsConstructor
@@ -25,12 +26,14 @@ public class AccountsServiceImpl implements IAccountsService {
 
   private final AccountsRepository accountsRepository;
   private final CustomerRepository customerRepository;
+  private final StreamBridge streamBridge;
 
   /**
    * Creates a new account with the given customer details
    *
    * @param customerDto - CustomerDto Object containing customer and account details
-   * @throws CustomerAlreadyExistsException if a customer with the given mobile number already exists
+   * @throws CustomerAlreadyExistsException if a customer with the given mobile number already
+   *                                        exists
    */
   @Override
   public void createAccount(CustomerDto customerDto) {
@@ -45,7 +48,14 @@ public class AccountsServiceImpl implements IAccountsService {
     }
 
     var savedCustomer = customerRepository.save(customer);
-    accountsRepository.save(createNewAccount(savedCustomer));
+    var savedAccount = accountsRepository.save(createNewAccount(savedCustomer));
+    sendCommunication(savedAccount, savedCustomer);
+  }
+
+  private void sendCommunication(Accounts account, Customer customer) {
+    var accountsMessageDto = new AccountsMessageDto(account.getAccountNumber(), customer.getName(),
+        customer.getEmail(), customer.getMobileNumber());
+    streamBridge.send("send-communication-out-0", accountsMessageDto);
   }
 
   /**
@@ -70,7 +80,8 @@ public class AccountsServiceImpl implements IAccountsService {
    *
    * @param mobileNumber - Input Mobile Number used to identify the customer
    * @return CustomerDto containing customer and account details
-   * @throws ResourceNotFoundException if no customer or account is found with the given mobile number
+   * @throws ResourceNotFoundException if no customer or account is found with the given mobile
+   *                                   number
    */
   @Override
   public CustomerDto fetchAccount(String mobileNumber) {
@@ -123,7 +134,8 @@ public class AccountsServiceImpl implements IAccountsService {
   /**
    * Deletes account details for a customer identified by mobile number
    *
-   * @param mobileNumber - Input Mobile Number used to identify the customer whose account should be deleted
+   * @param mobileNumber - Input Mobile Number used to identify the customer whose account should be
+   *                     deleted
    * @return boolean indicating if the delete of Account details is successful or not
    * @throws ResourceNotFoundException if no customer is found with the given mobile number
    */
@@ -138,5 +150,19 @@ public class AccountsServiceImpl implements IAccountsService {
     return true;
   }
 
+  @Override
+  public boolean updateCommunicationSwitch(Long accountNumber) {
+    var isUpdated = false;
+    if (accountNumber != null) {
+      var accounts = accountsRepository.findById(accountNumber).orElseThrow(
+          () -> new ResourceNotFoundException("Account", "AccountNumber", accountNumber.toString())
+      );
 
+      accounts.setCommunicationSw(true);
+      accountsRepository.save(accounts);
+      isUpdated = true;
+    }
+
+    return isUpdated;
+  }
 }
