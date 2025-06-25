@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: discovery-service
+spec:
+  selector:
+    app: discovery-service
+  ports:
+    - port: 8070
+      targetPort: 8070
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: discovery-service-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: discovery-service
+spec:
+  selector:
+    matchLabels:
+      app: discovery-service
+  template:
+    metadata:
+      labels:
+        app: discovery-service
+    spec:
+      containers:
+      - name: discovery-service
+        image: nazjara/discovery-service:1.0.0-SNAPSHOT
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8070
+        envFrom:
+        - configMapRef:
+            name: common-config
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: dev
+        - name: SPRING_RABBITMQ_HOST
+          value: rabbitmq
+        - name: SPRING_CONFIG_SERVER_URI
+          value: http://config-server:8071
+        - name: OTEL_SERVICE_NAME
+          value: discovery-service
+        volumeMounts:
+        - name: discovery-service-persistent-storage
+          mountPath: /app/data
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8070
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8070
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+      volumes:
+      - name: discovery-service-persistent-storage
+        persistentVolumeClaim:
+          claimName: discovery-service-pvc

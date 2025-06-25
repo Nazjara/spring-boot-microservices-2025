@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: common-config
+data:
+  SPRING_PROFILES_ACTIVE: "dev"
+  SPRING_CONFIG_SERVER_URI: "http://config-server:8071"
+  SPRING_RABBITMQ_HOST: "rabbitmq"
+  SPRING_EUREKA_SERVER_URI: "http://discovery-service:8070"
+  JAVA_TOOL_OPTIONS: "-javaagent:/app/libs/opentelemetry-javaagent-2.16.0.jar"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://tempo:4318"
+  OTEL_METRICS_EXPORTER: "none"
+  OTEL_LOGS_EXPORTER: "none"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-credentials
+type: Opaque
+stringData:
+  MYSQL_ROOT_PASSWORD: "root"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keycloak-credentials
+type: Opaque
+stringData:
+  MYSQL_USER: "keycloak"
+  MYSQL_PASSWORD: "keycloakpass"
+  MYSQL_ROOT_PASSWORD: "rootpass"
+  KEYCLOAK_ADMIN: "admin"
+  KEYCLOAK_ADMIN_PASSWORD: "adminpass"
