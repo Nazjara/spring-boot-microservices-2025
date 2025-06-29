@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-common-config
+  labels:
+    {{- include "microservices.labels" . | nindent 4 }}
+data:
+  SPRING_PROFILES_ACTIVE: {{ .Values.configMap.springProfilesActive | quote }}
+  SPRING_CONFIG_SERVER_URI: {{ .Values.configMap.springConfigServerUri | quote }}
+  SPRING_RABBITMQ_HOST: {{ .Values.configMap.springRabbitmqHost | quote }}
+  SPRING_EUREKA_SERVER_URI: {{ .Values.configMap.springEurekaServerUri | quote }}
+  JAVA_TOOL_OPTIONS: {{ .Values.configMap.javaToolOptions | quote }}
+  OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.configMap.otelExporterOtlpEndpoint | quote }}
+  OTEL_METRICS_EXPORTER: {{ .Values.configMap.otelMetricsExporter | quote }}
+  OTEL_LOGS_EXPORTER: {{ .Values.configMap.otelLogsExporter | quote }}

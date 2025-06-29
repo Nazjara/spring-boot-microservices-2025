@@ -1,0 +1,177 @@
+# Global values
+global:
+  environment: dev
+
+# ConfigMap values
+configMap:
+  springProfilesActive: dev
+  springConfigServerUri: http://config-server:8071
+  springRabbitmqHost: spring-boot-microservices-rabbitmq
+  springEurekaServerUri: http://discovery-service:8070
+  javaToolOptions: ""
+  otelExporterOtlpEndpoint: "http://tempo:4318"
+  otelMetricsExporter: "none"
+  otelLogsExporter: "none"
+
+# Secret values
+secrets:
+  mysql:
+    rootPassword: root
+  keycloak:
+    user: keycloak
+    password: keycloakpass
+    rootPassword: rootpass
+    admin: admin
+    adminPassword: adminpass
+
+# Dependencies
+mysql-accounts:
+  enabled: true
+  auth:
+    rootPassword: root
+    database: accountsdb
+  primary:
+    persistence:
+      size: 1Gi
+
+mysql-cards:
+  enabled: true
+  auth:
+    rootPassword: root
+    database: cardsdb
+  primary:
+    persistence:
+      size: 1Gi
+
+mysql-loans:
+  enabled: true
+  auth:
+    rootPassword: root
+    database: loansdb
+  primary:
+    persistence:
+      size: 1Gi
+
+
+rabbitmq:
+  enabled: true
+  auth:
+    username: guest
+    password: guest
+  persistence:
+    enabled: true
+    size: 1Gi
+
+redis:
+  enabled: true
+  auth:
+    password: redis
+  master:
+    persistence:
+      enabled: true
+      size: 1Gi
+
+minio:
+  enabled: true
+  auth:
+    rootUser: minioadmin
+    rootPassword: minioadmin
+  persistence:
+    enabled: true
+    size: 1Gi
+
+keycloak:
+  enabled: true
+  auth:
+    adminUser: admin
+    adminPassword: adminpass
+  postgresql:
+    enabled: true
+    auth:
+      username: keycloak
+      password: keycloakpass
+      database: keycloakdb
+
+monitoring:
+  enabled: true
+
+# Loki Stack configuration
+loki-stack:
+  grafana:
+    enabled: true
+  prometheus:
+    enabled: true
+  loki:
+    enabled: true
+
+# Microservices
+accounts:
+  image:
+    repository: nazjara/accounts
+    tag: 1.0.0-SNAPSHOT
+    pullPolicy: Never
+  service:
+    port: 8080
+  persistence:
+    enabled: true
+    size: 1Gi
+  env:
+    dbUrl: jdbc:mysql://spring-boot-microservices-mysql-accounts:3306/accountsdb
+
+loans:
+  image:
+    repository: nazjara/loans
+    tag: 1.0.0-SNAPSHOT
+    pullPolicy: Never
+  service:
+    port: 8090
+  persistence:
+    enabled: true
+    size: 1Gi
+  env:
+    dbUrl: jdbc:mysql://spring-boot-microservices-mysql-loans:3306/loansdb
+
+cards:
+  image:
+    repository: nazjara/cards
+    tag: 1.0.0-SNAPSHOT
+    pullPolicy: Never
+  service:
+    port: 9000
+  persistence:
+    enabled: true
+    size: 1Gi
+  env:
+    dbUrl: jdbc:mysql://spring-boot-microservices-mysql-cards:3306/cardsdb
+
+configServer:
+  image:
+    repository: nazjara/configserver
+    tag: 1.0.0-SNAPSHOT
+    pullPolicy: Never
+  service:
+    port: 8071
+
+discoveryService:
+  image:
+    repository: nazjara/discovery-service
+    tag: 1.0.0-SNAPSHOT
+    pullPolicy: Never
+  service:
+    port: 8070
+
+gatewayService:
+  image:
+    repository: nazjara/gateway-service
+    tag: 1.0.0-SNAPSHOT
+    pullPolicy: Never
+  service:
+    port: 8072
+
+messageService:
+  image:
+    repository: nazjara/message
+    tag: 1.0.0-SNAPSHOT
+    pullPolicy: Never
+  service:
+    port: 8073

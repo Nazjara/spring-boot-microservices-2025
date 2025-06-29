@@ -1,0 +1,111 @@
+{{- $services := dict "accounts" .Values.accounts "loans" .Values.loans "cards" .Values.cards "configServer" .Values.configServer "discoveryService" .Values.discoveryService "gatewayService" .Values.gatewayService "messageService" .Values.messageService }}
+{{- range $name, $service := $services }}
+{{- if $service }}
+{{- if .service }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name | replace "Service" "-service" | replace "Server" "-server" }}
+spec:
+  selector:
+    app: {{ $name | replace "Service" "-service" | replace "Server" "-server" }}
+  ports:
+    - port: {{ .service.port }}
+      targetPort: {{ .service.port }}
+{{- end }}
+{{- if and .persistence (eq .persistence.enabled true) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $.Release.Name }}-{{ $name | replace "Service" "-service" | replace "Server" "-server" }}-pvc
+  labels:
+    {{- include "microservices.labels" $ | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .persistence.size | default "1Gi" }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name | replace "Service" "-service" | replace "Server" "-server" }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ $name | replace "Service" "-service" | replace "Server" "-server" }}
+  template:
+    metadata:
+      labels:
+        app: {{ $name | replace "Service" "-service" | replace "Server" "-server" }}
+    spec:
+      initContainers:
+      {{- if eq $name "configServer" }}
+      # Config server has no dependencies
+      {{- else if eq $name "discoveryService" }}
+      # Discovery service depends on config server
+      - name: wait-for-config-server
+        image: busybox
+        command: ['sh', '-c', 'until nc -z config-server 8071; do echo waiting for config-server; sleep 2; done;']
+      {{- else }}
+      # Other services depend on config server and discovery service
+      - name: wait-for-config-server
+        image: busybox
+        command: ['sh', '-c', 'until nc -z config-server 8071; do echo waiting for config-server; sleep 2; done;']
+      - name: wait-for-discovery-service
+        image: busybox
+        command: ['sh', '-c', 'until nc -z discovery-service 8070; do echo waiting for discovery-service; sleep 2; done;']
+      {{- end }}
+      {{- if or (eq $name "accounts") (eq $name "loans") (eq $name "cards") }}
+      # Database services depend on their respective MySQL instances
+      - name: wait-for-mysql
+        image: busybox
+        command: ['sh', '-c', 'until nc -z {{ $.Release.Name }}-mysql-{{ $name }} 3306; do echo waiting for mysql-{{ $name }}; sleep 2; done;']
+      {{- end }}
+      {{- if eq $name "messageService" }}
+      # Message service depends on RabbitMQ
+      - name: wait-for-rabbitmq
+        image: busybox
+        command: ['sh', '-c', 'until nc -z {{ $.Release.Name }}-rabbitmq 5672; do echo waiting for rabbitmq; sleep 2; done;']
+      {{- end }}
+      containers:
+      - name: {{ $name | replace "Service" "-service" | replace "Server" "-server" }}
+        {{- if .image }}
+        image: {{ include "microservices.image" .image }}
+        imagePullPolicy: {{ .image.pullPolicy }}
+        {{- else }}
+        image: nazjara/{{ $name }}:1.0.0-SNAPSHOT
+        imagePullPolicy: Never
+        {{- end }}
+        {{- if .service }}
+        ports:
+        - containerPort: {{ .service.port }}
+        {{- else }}
+        ports:
+        - containerPort: 8080
+        {{- end }}
+        envFrom:
+        - configMapRef:
+            name: {{ $.Release.Name }}-common-config
+        env:
+        - name: OTEL_SERVICE_NAME
+          value: {{ $name | replace "Service" "-service" | replace "Server" "-server" }}
+        {{- if and .env .env.dbUrl }}
+        - name: DB_URL
+          value: {{ .env.dbUrl }}
+        {{- end }}
+        {{- if and .persistence (eq .persistence.enabled true) }}
+        volumeMounts:
+        - name: {{ $name | replace "Service" "-service" | replace "Server" "-server" }}-persistent-storage
+          mountPath: /app/data
+      volumes:
+      - name: {{ $name | replace "Service" "-service" | replace "Server" "-server" }}-persistent-storage
+        persistentVolumeClaim:
+          claimName: {{ $.Release.Name }}-{{ $name | replace "Service" "-service" | replace "Server" "-server" }}-pvc
+        {{- end }}
+{{- end }}
+{{- end }}

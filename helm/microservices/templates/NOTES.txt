@@ -1,0 +1,38 @@
+Thank you for installing {{ .Chart.Name }}.
+
+Your release is named {{ .Release.Name }}.
+
+To learn more about the release, try:
+
+  $ helm status {{ .Release.Name }}
+  $ helm get all {{ .Release.Name }}
+
+The following services are available:
+
+{{- $services := dict "accounts" .Values.accounts "loans" .Values.loans "cards" .Values.cards "configServer" .Values.configServer "discoveryService" .Values.discoveryService "gatewayService" .Values.gatewayService "messageService" .Values.messageService }}
+{{- range $name, $service := $services }}
+{{- if $service }}
+  - {{ $name | replace "Service" "-service" | replace "Server" "-server" }}{{ if .service }}: {{ .service.port }}{{ end }}
+{{- end }}
+{{- end }}
+
+Third-party services:
+  - MySQL for accounts, cards, and loans
+  - RabbitMQ for messaging
+  - Redis for caching
+  - MinIO for object storage
+  - Keycloak for authentication
+  - Monitoring stack (Loki, Prometheus, Grafana)
+
+To access the gateway service:
+  $ kubectl port-forward svc/gateway-service 8072:8072
+
+To access Eureka (Discovery Service) UI:
+  $ kubectl port-forward svc/discovery-service 8070:8070
+  Then open http://localhost:8070 in your browser
+
+To access Grafana for monitoring:
+  $ kubectl port-forward svc/{{ .Release.Name }}-grafana 3000:80
+
+  Username: admin
+  Password: $ kubectl get secret {{ .Release.Name }}-grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
